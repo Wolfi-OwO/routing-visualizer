@@ -15,7 +15,7 @@ Build topologies with drag-and-drop, watch live packets flow hop-by-hop, inspect
 
 </div>
 
-![Network Builder](network-builder.png)
+![Network Builder](docs/screenshots/network-builder.png)
 
 ## Features
 
