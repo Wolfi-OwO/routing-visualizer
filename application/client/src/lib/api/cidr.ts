@@ -1,11 +1,11 @@
-import { api } from './client'
-import type { CIDRResult } from '../../types'
+import { api } from './client.ts'
+import type { CIDRResult } from '../../types/index.ts'
 
 export const cidr = {
   calculate: (input: string) =>
-    api.post<CIDRResult>('/cidr/calculate', { input }),
+    api.post<CIDRResult>('/cidr/calculations', { input }),
   subnets: (network: string, count?: number, prefixLength?: number) =>
-    api.post<{ subnets: CIDRResult[]; count: number }>('/cidr/subnets', { network, count, prefixLength }),
+    api.post<{ items: CIDRResult[]; count: number }>('/cidr/subnets', { network, count, prefixLength }),
   supernet: (networks: string[]) =>
-    api.post<CIDRResult>('/cidr/supernet', { networks }),
+    api.post<CIDRResult>('/cidr/supernets', { networks }),
 }

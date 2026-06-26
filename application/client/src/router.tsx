@@ -1,14 +1,19 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import Layout from './layouts/Layout'
-import DashboardPage from './pages/DashboardPage'
-import PacketCapturePage from './pages/PacketCapturePage'
-import NetworkBuilderPage from './pages/NetworkBuilderPage'
-import CIDRCalculatorPage from './pages/CIDRCalculatorPage'
+import RegularLayout from './layouts/regular-layout.tsx'
+import AdminLayout from './layouts/admin-layout.tsx'
+import ErrorPage from './layouts/error-page.tsx'
+import DashboardPage from './pages/dashboard/dashboard-page.tsx'
+import PacketCapturePage from './pages/packets/packet-capture-page.tsx'
+import NetworkBuilderPage from './pages/network/network-builder-page.tsx'
+import CIDRCalculatorPage from './pages/cidr/cidr-calculator-page.tsx'
+import AdminPage from './pages/admin/admin-page.tsx'
 
+// URL ↔ layout/page mapping (React Browser Router).
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Layout />,
+    element: <RegularLayout />,
+    errorElement: <ErrorPage />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'packets', element: <PacketCapturePage /> },
@@ -16,5 +21,11 @@ export const router = createBrowserRouter([
       { path: 'cidr', element: <CIDRCalculatorPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
+  },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    errorElement: <ErrorPage />,
+    children: [{ index: true, element: <AdminPage /> }],
   },
 ])

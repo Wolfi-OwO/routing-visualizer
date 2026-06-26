@@ -1,7 +1,8 @@
-// Barrel for the API layer — one module per backend feature.
-export { api } from './client'
-export { packets } from './packets'
-export { cidr } from './cidr'
-export { network } from './network'
-export { send } from './send'
-export type { TraceHop, TraceResult } from './send'
+// Barrel for the API layer — one module per backend resource.
+export { api } from './client.ts'
+export { packets } from './packets.ts'
+export { capture } from './capture.ts'
+export { cidr } from './cidr.ts'
+export { network } from './networks.ts'
+export { send } from './traces.ts'
+export type { TraceHop, TraceResult } from './traces.ts'

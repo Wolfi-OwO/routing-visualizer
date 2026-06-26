@@ -43,8 +43,10 @@ Build topologies with drag-and-drop, watch live packets flow hop-by-hop, inspect
 | Layer    | Tech                                                                                                  |
 | -------- | ----------------------------------------------------------------------------------------------------- |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS, React Flow (`@xyflow/react`), Recharts, lucide-react, axios |
-| Backend  | Node.js, Express, TypeScript, Server-Sent Events                                                      |
-| Tooling  | ESLint, `tsc`, GitHub Actions                                                                         |
+| Backend  | Node.js, Express, TypeScript, MongoDB + Mongoose, Server-Sent Events, terminus (health checks)        |
+| Tooling  | ESLint, `tsc`, `node:test` + supertest, GitHub Actions                                                |
+
+The HTTP API is **RESTful (Richardson Maturity Model level 3)**: plural resource URLs (`/api/networks`, `/api/packets`, `/api/capture`, `/api/cidr`), correct verbs/status codes (`201 Created` + `Location`, `204 No Content`), and **HATEOAS** `_links` on every representation. `GET /api` is the hypermedia entry point. Liveness/readiness probes are exposed at `/api/live` and `/api/ready`.
 
 ## Project structure
 
@@ -52,51 +54,51 @@ Build topologies with drag-and-drop, watch live packets flow hop-by-hop, inspect
 routing-visualizer/
 ├─ application/                 # Express + TypeScript backend (REST + SSE)
 │  ├─ src/
-│  │  ├─ routes/                # express.Router definitions: packets, cidr, network, send
+│  │  ├─ routes/                # express.Router definitions: networks, cidr, packets, capture
 │  │  ├─ handlers/              # request handlers (controllers) per route
-│  │  ├─ services/              # business logic: packetSimulator, cidrService, packetSenderService
-│  │  ├─ db/                    # data store (in-memory topology repository)
-│  │  ├─ middlewares/           # requestLogger, errorHandler
-│  │  ├─ lib/                   # reusable utilities (logger, HTTP error classes)
+│  │  ├─ services/              # business logic: packet-simulator, cidr-service, packet-sender-service
+│  │  ├─ db/                    # MongoDB: connection, models/, network-service (repository), seed
+│  │  ├─ middlewares/           # request-logger, error-handler
+│  │  ├─ lib/                   # logger, HTTP error classes, hateoas links, health-checks
 │  │  ├─ config/                # environment-driven configuration
-│  │  ├─ types/                 # shared domain types
+│  │  ├─ types/                 # shared domain types (packet, network, cidr)
 │  │  └─ app.ts                 # express app assembly (CORS, body parsing, routes)
-│  ├─ server.ts                 # entrypoint (binds HOST:PORT, default 0.0.0.0:8080)
-│  ├─ tests/                    # test suite (planned)
+│  ├─ server.ts                 # entrypoint (DB connect + seed, binds HOST:PORT, health checks)
+│  ├─ tests/                    # endpoint tests (node:test + supertest + mongodb-memory-server)
 │  ├─ Dockerfile · .dockerignore · .prettierrc · .env.example · README.md
 │  │
-│  └─ client/                   # React + Vite frontend
+│  └─ client/                   # React + Vite frontend (kebab-case, explicit import extensions)
 │     ├─ src/
-│     │  ├─ pages/              # route-level views (Dashboard, PacketCapture, NetworkBuilder, CIDR)
-│     │  ├─ components/         # feature components (NetworkBuilder/, PacketCapture/)
-│     │  ├─ layouts/            # Layout + Sidebar
-│     │  ├─ common/             # shared UI (Footer)
-│     │  ├─ lib/api/            # axios API client (one module per backend feature)
-│     │  ├─ hooks/ · context/   # shared React building blocks
+│     │  ├─ pages/              # one folder per page incl. its components (dashboard/, packets/, network/, cidr/, admin/)
+│     │  ├─ components/         # core/ (generic) · toasts/ (toast UI)
+│     │  ├─ layouts/            # regular-layout, admin-layout, top-nav, sidebar, error-page
+│     │  ├─ lib/api/            # axios API client (one module per backend resource)
+│     │  ├─ hooks/ · context/   # use-toast hook · toast provider
+│     │  ├─ config/             # frontend config (VITE_* env vars)
 │     │  ├─ styles/             # global CSS
-│     │  ├─ config.ts           # frontend config (VITE_* env vars)
 │     │  └─ types/              # shared types (mirror of backend)
 │     ├─ Dockerfile · nginx.conf · .prettierrc
 │     └─ vite.config.ts         # dev proxy  /api → http://localhost:8080
 ├─ .github/workflows/ci.yml     # CI: typecheck + lint + build
-├─ docker-compose.yml           # full stack (frontend :8080 + backend :8080)
+├─ docker-compose.yml           # full stack: mongo + backend (+ frontend)
 ├─ LICENSE
 └─ ReadMe.md
 ```
 
-> The backend lives in `application/` and the frontend in `application/client/` — two independent npm packages, organized into clear enterprise layers (routes / handlers / services / db / middlewares / lib / config on the server; pages / components / layouts / lib on the client).
+> The backend lives in `application/` and the frontend in `application/client/` — two independent npm packages, organized into clear enterprise layers (routes / handlers / services / db / middlewares / lib / config on the server; pages / components / layouts / lib / config / hooks on the client). All filenames are lowercase kebab-case and every import carries its explicit extension, so the project builds identically on case-sensitive (Linux) filesystems.
 
 ## Getting started
 
 ### Prerequisites
 
 - **Node.js ≥ 20** (CI uses Node 22) and **npm**
+- **MongoDB** — run one locally with `docker run -p 27017:27017 mongo:7` (or use the bundled `docker compose up mongo`). Override the connection with `MONGO_URI` (default `mongodb://localhost:27017/netviz`). The backend seeds a demo "Enterprise Network" topology on first start.
 
 ### Run in development
 
 The app has two parts — run each in its own terminal.
 
-**1) Backend** (REST API + packet stream on **:8080**)
+**1) Backend** (REST API + packet stream on **:8080**, needs MongoDB running)
 
 ```bash
 cd application
@@ -124,6 +126,7 @@ Then open **<http://localhost:5173>** 🎉
 | `npm run build`     | Compile TypeScript → `dist/`                    |
 | `npm start`         | Run the compiled server (`node dist/server.js`) |
 | `npm run typecheck` | Type-check without emitting                     |
+| `npm test`          | Run endpoint tests (in-memory MongoDB)          |
 
 **Frontend** (`application/client/`)
 
